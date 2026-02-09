@@ -27,7 +27,12 @@ main() {
    The 'k8s/overlays/oci' directory contains OCI-specific configs that layer on top of the base manifests.
    'kubectl apply -k' renders and applies all the Kubernetes resources at once."
 
-  PROJECT_ROOT="$(get_project_root)"
+  # Get project root from BAKE_FILE location
+  if [[ -z "${BAKE_FILE:-}" ]]; then
+    error_exit "BAKE_FILE not set in .env.oci-deploy"
+  fi
+  PROJECT_ROOT="$(dirname "$BAKE_FILE")"
+  log "Using project root: $PROJECT_ROOT"
   cd "$PROJECT_ROOT"
 
   log "Deploying all Kubernetes resources using Kustomize..."

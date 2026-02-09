@@ -84,6 +84,12 @@ setup_buildx() {
 build_images() {
   log "Using bake file: $BAKE_FILE"
 
+  # Change to the directory containing the bake file so relative paths work
+  local bake_dir="$(dirname "$BAKE_FILE")"
+  local bake_filename="$(basename "$BAKE_FILE")"
+  log "Changing to project directory: $bake_dir"
+  cd "$bake_dir"
+
   # Show what will be built
   print_section "Build Plan"
   explain "Docker Bake reads the docker-bake.hcl file and builds all defined targets in parallel.
@@ -91,7 +97,7 @@ build_images() {
    Use --print to preview the build plan without actually building."
 
   run_cmd "Previewing build plan from docker-bake.hcl" \
-    docker buildx bake -f "$BAKE_FILE" --print
+    docker buildx bake -f "$bake_filename" --print
 
   # Build and push all images
   print_section "Building and Pushing Images"
@@ -100,7 +106,7 @@ build_images() {
    • Registry prefix: ${OCIR_PREFIX}
    • Platform: linux/arm64 (for OCI Ampere A1 free tier)
    • All targets will be built in parallel" \
-    docker buildx bake -f "$BAKE_FILE" --push
+    docker buildx bake -f "$bake_filename" --push
 
   success "All images built and pushed to OCIR"
 
