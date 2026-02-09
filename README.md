@@ -277,6 +277,19 @@ Your home region is set at account creation and **cannot be changed** on the fre
 
 If you exceed free tier limits, additional resources will incur charges.
 
+### A1 Instance Availability Tip
+
+**Upgrade from Free Trial to Pay As You Go (PAYG)** to dramatically improve your chances of getting A1 instances.
+
+During the 30-day free trial, you're competing with many other trial accounts for limited A1 capacity. After upgrading to PAYG:
+- You still get the same Always Free resources at no cost
+- A1 instances become much easier to provision
+- You won't be charged unless you exceed free tier limits
+
+To upgrade: OCI Console → Billing → Upgrade to Paid Account
+
+This is the single most effective way to resolve "Out of host capacity" errors for A1 instances.
+
 ## Cleanup
 
 To tear down the deployment:

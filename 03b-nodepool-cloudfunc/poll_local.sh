@@ -11,6 +11,11 @@ POLL_INTERVAL="${POLL_INTERVAL:-60}"
 echo "=== Starting capacity polling (every ${POLL_INTERVAL}s) ==="
 echo "    Press Ctrl+C to stop"
 echo ""
+echo "💡 TIP: If you're on the 30-day free trial and A1 capacity is scarce,"
+echo "   upgrade to Pay As You Go (PAYG) - you still get the same free tier"
+echo "   resources, but A1 instances become much easier to provision."
+echo "   OCI Console → Billing → Upgrade to Paid Account"
+echo ""
 
 ATTEMPT=0
 while true; do
