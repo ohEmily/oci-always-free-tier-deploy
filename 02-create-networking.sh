@@ -50,7 +50,7 @@ main() {
       --compartment-id "$TENANCY_OCID" \
       --display-name "$VCN_NAME" \
       --cidr-block "$VCN_CIDR" \
-      --dns-label "shouldiwalk" \
+      --dns-label "${CLUSTER_NAME//[^a-z0-9]/}" \
       --wait-for-state AVAILABLE \
       --query 'data.id' \
       --raw-output)
@@ -198,7 +198,7 @@ main() {
   EXISTING_NODE_SUBNET=$(oci network subnet list \
     --compartment-id "$TENANCY_OCID" \
     --vcn-id "$VCN_OCID" \
-    --display-name "shouldiwalk-node-subnet" \
+    --display-name "${CLUSTER_NAME}-node-subnet" \
     --lifecycle-state AVAILABLE \
     --query 'data[0].id' \
     --raw-output 2>/dev/null || echo "")
@@ -219,7 +219,7 @@ main() {
     NODE_SUBNET_OCID=$(oci network subnet create \
       --compartment-id "$TENANCY_OCID" \
       --vcn-id "$VCN_OCID" \
-      --display-name "shouldiwalk-node-subnet" \
+      --display-name "${CLUSTER_NAME}-node-subnet" \
       --cidr-block "10.0.2.0/24" \
       --route-table-id "$RT_OCID" \
       --dns-label "nodesubnet" \

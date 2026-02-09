@@ -74,7 +74,7 @@ gcloud scheduler jobs create http oci-capacity-poller \
 | `NODE_MEMORY_GB` | `12` | Memory per node |
 | `NODE_COUNT` | `2` | Number of nodes |
 | `KUBERNETES_VERSION` | `v1.32.1` | K8s version |
-| `NODE_POOL_NAME` | `shouldiwalk-nodes` | Node pool name |
+| `NODE_POOL_NAME` | `my-nodes` | Node pool name |
 | `NOTIFICATION_URL` | (none) | Webhook URL for success notification |
 
 ## Monitoring

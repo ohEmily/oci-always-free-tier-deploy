@@ -17,16 +17,16 @@ source "${SCRIPT_DIR}/lib/common.sh"
 delete_k8s_resources() {
   print_section "Deleting Kubernetes Resources"
   
-  if kubectl get namespace shouldiwalk &>/dev/null; then
-    log "Deleting all resources in shouldiwalk namespace..."
-    kubectl delete all,secrets,configmaps,pvc --all -n shouldiwalk || true
+  if kubectl get namespace "$NAMESPACE" &>/dev/null; then
+    log "Deleting all resources in $NAMESPACE namespace..."
+    kubectl delete all,secrets,configmaps,pvc --all -n "$NAMESPACE" || true
     
     log "Deleting namespace..."
-    kubectl delete namespace shouldiwalk || true
+    kubectl delete namespace "$NAMESPACE" || true
     
     success "Kubernetes resources deleted"
   else
-    log "Namespace 'shouldiwalk' not found, skipping..."
+    log "Namespace '$NAMESPACE' not found, skipping..."
   fi
 }
 

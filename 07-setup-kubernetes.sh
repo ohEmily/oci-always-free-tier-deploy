@@ -25,7 +25,7 @@ main() {
   # Create namespace
   echo ""
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "📝 Creating 'shouldiwalk' namespace in Kubernetes."
+echo "📝 Creating '$NAMESPACE' namespace in Kubernetes."
   echo "   • All our pods, services, and secrets will live in this namespace"
   echo "   • --dry-run=client -o yaml | kubectl apply -f - is idempotent (safe to re-run)"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

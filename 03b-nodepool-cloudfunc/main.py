@@ -19,7 +19,7 @@ Optional:
   NODE_MEMORY_GB        - Default: 12
   NODE_COUNT            - Default: 2
   KUBERNETES_VERSION    - Default: v1.32.1
-  NODE_POOL_NAME        - Default: shouldiwalk-nodes
+  NODE_POOL_NAME        - Default: my-nodes
   NOTIFICATION_URL      - Webhook URL to notify on success (optional)
 
 Return statuses:
@@ -249,7 +249,7 @@ def main(request=None):
         node_memory_gb = int(os.environ.get("NODE_MEMORY_GB", "12"))
         node_count = int(os.environ.get("NODE_COUNT", "2"))
         k8s_version = os.environ.get("KUBERNETES_VERSION", "v1.32.1")
-        node_pool_name = os.environ.get("NODE_POOL_NAME", "shouldiwalk-nodes")
+        node_pool_name = os.environ.get("NODE_POOL_NAME", "my-nodes")
         notification_url = os.environ.get("NOTIFICATION_URL", "")
 
         is_arm = "A1" in node_shape
