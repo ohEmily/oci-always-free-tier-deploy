@@ -1,0 +1,11 @@
+# OCI Deployment Environment
+# Add these lines to your root .gitignore to prevent accidentally committing secrets
+
+# OCI deployment environment variables (contains sensitive credentials)
+scripts/.env.oci-deploy
+
+# OCI resource OCIDs saved during deployment
+/tmp/oci-deploy-ocids.env
+
+# Docker buildx temporary files
+/tmp/oci-*.json
