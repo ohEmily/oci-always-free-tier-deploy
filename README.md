@@ -80,8 +80,10 @@ The deployment uses a two-file configuration approach:
 6. **`06-build-push-images.sh`** - Build and push Docker images
    - Logs into OCIR (Oracle Container Registry)
    - Sets up Docker buildx for ARM64 cross-compilation
-   - Builds service images for your application
+   - Reads `docker-bake.hcl` from the application repository
+   - Builds all images defined in the bake file in parallel
    - Pushes images directly to OCIR
+   - Use `--bake-file` to specify the path to `docker-bake.hcl`
 
 7. **`07-setup-kubernetes.sh`** - Set up Kubernetes namespace and secrets
    - Creates application namespace
@@ -239,7 +241,8 @@ caffeinate ./04-create-nodepool.sh
 ./05-configure-kubectl.sh
 
 # 6. Build and push Docker images (20-30 minutes)
-./06-build-push-images.sh
+# Specify the path to your application's docker-bake.hcl
+./06-build-push-images.sh --bake-file /path/to/your-app/docker-bake.hcl
 
 # 7. Set up Kubernetes namespace and secrets
 ./07-setup-kubernetes.sh
@@ -358,7 +361,7 @@ These scripts are designed to be educational:
 - **03-create-cluster.sh** - Kubernetes managed services
 - **04-create-nodepool.sh** - Capacity polling, node pool creation
 - **05-configure-kubectl.sh** - kubeconfig and token-based auth
-- **06-build-push-images.sh** - Docker buildx, ARM64 cross-compilation, registry auth
+- **`06-build-push-images.sh`** - Docker Bake, buildx, ARM64 cross-compilation, registry auth
 - **07-setup-kubernetes.sh** - Kubernetes secrets and image pull authentication
 - **08-deploy-application.sh** - Kustomize, declarative infrastructure
 - **09-verify-deployment.sh** - Kubernetes debugging and troubleshooting
@@ -374,6 +377,71 @@ For more information:
 - **OCI Always Free Tier**: https://www.oracle.com/cloud/free/
 - **Kubernetes Documentation**: https://kubernetes.io/docs/
 - **Kustomize Guide**: https://kustomize.io/
+
+## Docker Bake for Image Builds
+
+This repository uses [Docker Bake](https://docs.docker.com/build/bake/) for building container images. Docker Bake allows application repositories to define their image builds in a declarative `docker-bake.hcl` file.
+
+### How It Works
+
+1. Your application repository contains a `docker-bake.hcl` file defining what images to build
+2. The `06-build-push-images.sh` script reads that file and handles:
+   - OCIR authentication
+   - Docker buildx setup for ARM64 cross-compilation
+   - Building all images in parallel
+   - Pushing to the OCI Container Registry
+
+### Creating a docker-bake.hcl
+
+See `docker-bake.hcl.example` for a template. The basic structure:
+
+```hcl
+variable "OCIR_PREFIX" {
+  default = ""
+}
+
+variable "TAG" {
+  default = "latest"
+}
+
+variable "PLATFORM" {
+  default = "linux/arm64"
+}
+
+group "default" {
+  targets = ["api", "worker"]
+}
+
+target "api" {
+  context    = "./api"
+  dockerfile = "Dockerfile"
+  tags       = OCIR_PREFIX != "" ? ["${OCIR_PREFIX}/myapp-api:${TAG}"] : ["myapp-api:${TAG}"]
+  platforms  = [PLATFORM]
+}
+
+target "worker" {
+  context    = "./worker"
+  dockerfile = "Dockerfile"
+  tags       = OCIR_PREFIX != "" ? ["${OCIR_PREFIX}/myapp-worker:${TAG}"] : ["myapp-worker:${TAG}"]
+  platforms  = [PLATFORM]
+}
+```
+
+### Building Images
+
+```bash
+# Build images using a specific bake file
+./06-build-push-images.sh --bake-file /path/to/your-app/docker-bake.hcl
+
+# Or with the short flag
+./06-build-push-images.sh -f /path/to/your-app/docker-bake.hcl
+
+# Preview what will be built (from the app repo)
+cd /path/to/your-app
+docker buildx bake --print
+```
+
+For detailed instructions for AI agents, see [AGENTS.md](./AGENTS.md).
 
 ## Contributing
 

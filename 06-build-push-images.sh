@@ -1,18 +1,72 @@
 #!/bin/bash
-# 06-build-push-images.sh - Build and push Docker images to OCIR
+# 06-build-push-images.sh - Build and push Docker images to OCIR using Docker Bake
 #
-# Usage: ./06-build-push-images.sh
+# Usage:
+#   ./06-build-push-images.sh --bake-file /path/to/docker-bake.hcl
+#   ./06-build-push-images.sh -f /path/to/docker-bake.hcl
 #
 # This script:
 #   1. Logs into OCIR container registry
 #   2. Sets up Docker buildx for ARM64 cross-compilation
-#   3. Builds all 5 service images for ARM64 (Ampere A1 architecture)
-#   4. Pushes images directly to OCIR
+#   3. Reads the specified docker-bake.hcl file
+#   4. Builds all images defined in the bake file for ARM64 (Ampere A1 architecture)
+#   5. Pushes images directly to OCIR
+#
+# The bake file must define:
+#   - Image targets (context, dockerfile, tags)
+#   - Variables for OCIR_PREFIX, TAG, and PLATFORM
+#
+# See docker-bake.hcl.example for a template.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
+
+BAKE_FILE=""
+
+usage() {
+  echo "Usage: $0 --bake-file <path>"
+  echo ""
+  echo "Options:"
+  echo "  -f, --bake-file <path>  Path to docker-bake.hcl file (required)"
+  echo ""
+  echo "Example:"
+  echo "  $0 --bake-file ~/myapp/docker-bake.hcl"
+  echo ""
+  echo "See docker-bake.hcl.example for a template."
+  exit 1
+}
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -f|--bake-file)
+      BAKE_FILE="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      ;;
+    *)
+      echo "Unknown option: $1"
+      usage
+      ;;
+  esac
+done
+
+# Require bake file
+if [[ -z "$BAKE_FILE" ]]; then
+  echo "Error: --bake-file is required"
+  echo ""
+  usage
+fi
+
+# Resolve to absolute path and verify it exists
+if [[ ! -f "$BAKE_FILE" ]]; then
+  error_exit "Bake file not found: $BAKE_FILE"
+fi
+BAKE_FILE="$(cd "$(dirname "$BAKE_FILE")" && pwd)/$(basename "$BAKE_FILE")"
 
 docker_login() {
   explain "OCIR (Oracle Cloud Infrastructure Registry) is OCI's container registry - like Docker Hub but private.
@@ -34,15 +88,10 @@ docker_login() {
   success "Docker logged into OCIR"
 }
 
-build_images() {
+setup_buildx() {
   explain "OCI's free tier uses Ampere A1 processors (ARM64 architecture).
    Since you might be building on an Intel/AMD Mac, we use 'docker buildx' to cross-compile for ARM64.
-   Each image will be built and pushed directly to OCIR."
-
-  PROJECT_ROOT="$(get_project_root)"
-  cd "$PROJECT_ROOT"
-
-  log "Working from project root: $(pwd)"
+   Docker Bake will use this builder to build all images in parallel."
 
   # Setup buildx builder
   if ! docker buildx inspect multiarch > /dev/null 2>&1; then
@@ -55,43 +104,32 @@ build_images() {
     docker buildx use multiarch
     log "Using existing 'multiarch' buildx builder"
   fi
+}
 
-  # Build and push each image
-  local images=("backend" "frontend" "realtime")
-  
-  for image in "${images[@]}"; do
-    print_section "Building $image image"
-    
-    run_cmd "Building and pushing ARM64 image for $image
-     • Source: ./${image}/Dockerfile
-     • Target: ${OCIR_PREFIX}/shouldiwalk-${image}:latest" \
-      docker buildx build --platform linux/arm64 \
-        -t "${OCIR_PREFIX}/shouldiwalk-${image}:latest" \
-        --push "./${image}"
-    
-    success "${image} image pushed to OCIR"
-  done
+build_images() {
+  log "Using bake file: $BAKE_FILE"
 
-  # Build special images that need different contexts
-  print_section "Building db-migrate image"
-  run_cmd "Building and pushing ARM64 image for db-migrate
-   • Source: ./migrations/Dockerfile
-   • Target: ${OCIR_PREFIX}/shouldiwalk-db-migrate:latest" \
-    docker buildx build --platform linux/arm64 \
-      -t "${OCIR_PREFIX}/shouldiwalk-db-migrate:latest" \
-      --push ./migrations
-  success "db-migrate image pushed to OCIR"
+  # Show what will be built
+  print_section "Build Plan"
+  explain "Docker Bake reads the docker-bake.hcl file and builds all defined targets in parallel.
+   The OCIR_PREFIX variable is set to tag images for your OCI registry.
+   Use --print to preview the build plan without actually building."
 
-  print_section "Building airflow image"
-  run_cmd "Building and pushing ARM64 image for airflow
-   • Source: ./dags/Dockerfile.airflow (builds from repo root for context)
-   • Target: ${OCIR_PREFIX}/shouldiwalk-airflow:latest" \
-    docker buildx build --platform linux/arm64 \
-      -t "${OCIR_PREFIX}/shouldiwalk-airflow:latest" \
-      -f dags/Dockerfile.airflow --push .
-  success "airflow image pushed to OCIR"
+  run_cmd "Previewing build plan from docker-bake.hcl" \
+    docker buildx bake -f "$BAKE_FILE" --print
 
-  explain "All 5 images are now in OCIR! You can verify at:
+  # Build and push all images
+  print_section "Building and Pushing Images"
+
+  run_cmd "Building and pushing all images defined in docker-bake.hcl
+   • Registry prefix: ${OCIR_PREFIX}
+   • Platform: linux/arm64 (for OCI Ampere A1 free tier)
+   • All targets will be built in parallel" \
+    docker buildx bake -f "$BAKE_FILE" --push
+
+  success "All images built and pushed to OCIR"
+
+  explain "All images are now in OCIR! You can verify at:
    OCI Console → Developer Services → Container Registry"
 }
 
@@ -106,7 +144,13 @@ main() {
     error_exit "Docker is not installed. Run: brew install docker"
   fi
 
+  # Export OCIR_PREFIX for docker-bake.hcl to use
+  export OCIR_PREFIX
+
+  log "Bake file: $BAKE_FILE"
+
   docker_login
+  setup_buildx
   build_images
 }
 

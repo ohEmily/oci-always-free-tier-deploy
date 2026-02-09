@@ -1,0 +1,151 @@
+# docker-bake.hcl.example - Example Docker Bake configuration
+#
+# Copy this file to your application repository as docker-bake.hcl and customize
+# the targets to match your project's Docker images.
+#
+# Usage:
+#   docker buildx bake                                    # Build all images (no push)
+#   docker buildx bake --push                             # Build and push all images
+#   docker buildx bake api worker                         # Build specific targets
+#   OCIR_PREFIX=iad.ocir.io/namespace docker buildx bake  # Override registry prefix
+#
+# For more information:
+#   https://docs.docker.com/build/bake/
+#   https://docs.docker.com/build/bake/reference/
+
+# ============================================================================
+# Variables
+# ============================================================================
+# Variables can be overridden via environment variables or --set flag
+
+variable "OCIR_PREFIX" {
+  default = ""
+  description = "Container registry prefix (e.g., iad.ocir.io/namespace)"
+}
+
+variable "TAG" {
+  default = "latest"
+  description = "Image tag to apply to all images"
+}
+
+variable "PLATFORM" {
+  default = "linux/arm64"
+  description = "Target platform for builds (linux/arm64 for OCI free tier Ampere A1)"
+}
+
+variable "PROJECT_NAME" {
+  default = "myapp"
+  description = "Project name prefix for image names"
+}
+
+# ============================================================================
+# Groups
+# ============================================================================
+# Groups define sets of targets to build together
+
+# Build all images by default
+group "default" {
+  targets = ["api", "worker", "migrations"]
+}
+
+# Build only runtime images (exclude one-time jobs)
+group "runtime" {
+  targets = ["api", "worker"]
+}
+
+# ============================================================================
+# Targets
+# ============================================================================
+# Each target defines a single Docker image build
+
+# Helper function to generate tags
+function "image_tag" {
+  params = [name]
+  result = OCIR_PREFIX != "" ? ["${OCIR_PREFIX}/${PROJECT_NAME}-${name}:${TAG}"] : ["${PROJECT_NAME}-${name}:${TAG}"]
+}
+
+# API service
+target "api" {
+  context    = "./api"
+  dockerfile = "Dockerfile"
+  tags       = image_tag("api")
+  platforms  = [PLATFORM]
+}
+
+# Background worker
+target "worker" {
+  context    = "./worker"
+  dockerfile = "Dockerfile"
+  tags       = image_tag("worker")
+  platforms  = [PLATFORM]
+}
+
+# Database migrations job
+target "migrations" {
+  context    = "./migrations"
+  dockerfile = "Dockerfile"
+  tags       = image_tag("migrations")
+  platforms  = [PLATFORM]
+}
+
+# ============================================================================
+# Advanced Examples (commented out)
+# ============================================================================
+
+# # Image with custom Dockerfile location
+# target "custom-dockerfile" {
+#   context    = "."
+#   dockerfile = "docker/Dockerfile.custom"
+#   tags       = image_tag("custom")
+#   platforms  = [PLATFORM]
+# }
+
+# # Image with build arguments
+# target "with-args" {
+#   context    = "./app"
+#   dockerfile = "Dockerfile"
+#   tags       = image_tag("app")
+#   platforms  = [PLATFORM]
+#   args = {
+#     NODE_ENV    = "production"
+#     API_VERSION = "v2"
+#   }
+# }
+
+# # Multi-platform build (if not constrained to ARM64)
+# target "multi-platform" {
+#   context    = "./app"
+#   dockerfile = "Dockerfile"
+#   tags       = image_tag("app")
+#   platforms  = ["linux/amd64", "linux/arm64"]
+# }
+
+# # Target that inherits from another
+# target "api-base" {
+#   context    = "./api"
+#   dockerfile = "Dockerfile"
+# }
+#
+# target "api-prod" {
+#   inherits   = ["api-base"]
+#   tags       = image_tag("api")
+#   platforms  = [PLATFORM]
+#   args = {
+#     ENV = "production"
+#   }
+# }
+
+# # Matrix builds for multiple versions
+# target "python" {
+#   name       = "python-${version}"
+#   matrix = {
+#     version = ["3.10", "3.11", "3.12"]
+#   }
+#   context    = "./python"
+#   dockerfile = "Dockerfile"
+#   args = {
+#     PYTHON_VERSION = version
+#   }
+#   tags       = ["${PROJECT_NAME}-python:${version}"]
+#   platforms  = [PLATFORM]
+# }
