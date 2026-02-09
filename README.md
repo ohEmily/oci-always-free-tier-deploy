@@ -4,21 +4,25 @@ Modular, well-documented scripts for deploying applications to Oracle Cloud Infr
 
 ## Quick Start
 
-1. **Set up environment configuration:**
+1. **Create an OCI account and configure the CLI** (see [Prerequisites](#prerequisites) below)
+
+2. **Set up environment configuration:**
    ```bash
    cp .env.oci-deploy.example .env.oci-deploy
    # Edit .env.oci-deploy with your OCI credentials and configuration
    ```
 
-2. **Run the deployment:**
+3. **Run the deployment step-by-step:**
    ```bash
-   # Option A: Run everything at once
-   ./oci-deploy-full.sh all
-
-   # Option B: Run in phases (infrastructure, then images, then deploy)
-   ./oci-deploy-full.sh infra      # ~10 minutes
-   ./oci-deploy-full.sh images     # ~20-30 minutes
-   ./oci-deploy-full.sh deploy     # ~5 minutes
+   ./01-verify-cli.sh           # Verify OCI CLI works
+   ./02-create-networking.sh    # Create VCN (~2 min)
+   ./03-create-cluster.sh       # Create OKE cluster (~10 min)
+   ./04-create-nodepool.sh      # Poll for A1 capacity and create nodes
+   ./05-configure-kubectl.sh    # Configure kubectl
+   ./06-build-push-images.sh    # Build and push images (~20-30 min)
+   ./07-setup-kubernetes.sh     # Create namespace and secrets
+   ./08-deploy-application.sh   # Deploy application
+   ./09-verify-deployment.sh    # Verify deployment
    ```
 
 ## Script Structure
@@ -33,7 +37,7 @@ cp .env.oci-deploy.example .env.oci-deploy
 ```
 
 ### Shared Library
-- **`lib/common.sh`** - Reusable functions for all scripts
+- [`lib/common.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/lib/common.sh) - Reusable functions for all scripts
   - Logging and output formatting
   - Environment variable loading
   - OCI/kubectl utility functions
@@ -41,32 +45,32 @@ cp .env.oci-deploy.example .env.oci-deploy
 
 ### Step Scripts (Run Sequentially)
 
-1. **`01-verify-cli.sh`** - Verify OCI CLI is installed and configured
+1. [`01-verify-cli.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/01-verify-cli.sh) - Verify OCI CLI is installed and configured
    - Checks OCI CLI credentials work
    - Required: oci-cli installed
 
-2. **`02-create-networking.sh`** - Create VCN and networking
+2. [`02-create-networking.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/02-create-networking.sh) - Create VCN and networking
    - Creates Virtual Cloud Network (VCN)
    - Creates Internet Gateway for external connectivity
    - Creates Route Table with public routing
    - Creates Public Subnet for Kubernetes nodes
 
-3. **`03-create-cluster.sh`** - Create OKE Kubernetes cluster
+3. [`03-create-cluster.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/03-create-cluster.sh) - Create OKE Kubernetes cluster
    - Creates managed Kubernetes control plane
    - ⏱️ Takes 5-10 minutes
 
-4. **`04-create-nodepool.sh`** - Create node pool with capacity polling
+4. [`04-create-nodepool.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/04-create-nodepool.sh) - Create node pool with capacity polling
    - Polls for A1 capacity (free tier ARM instances are often constrained)
    - Creates node pool when capacity is available
    - Use `caffeinate ./04-create-nodepool.sh` to prevent sleep during polling
-   - See `03b-nodepool-cloudfunc/` for a Python/GCF alternative
+   - See [`03b-nodepool-cloudfunc/`](https://github.com/ohEmily/oci-always-free-tier-deploy/tree/main/03b-nodepool-cloudfunc) for a Python/GCF alternative
 
-5. **`05-configure-kubectl.sh`** - Configure kubectl access
+5. [`05-configure-kubectl.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/05-configure-kubectl.sh) - Configure kubectl access
    - Generates kubeconfig file
    - Verifies kubectl can connect to cluster
    - Uses OCI CLI for automatic token refresh
 
-6. **`06-build-push-images.sh`** - Build and push Docker images
+6. [`06-build-push-images.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/06-build-push-images.sh) - Build and push Docker images
    - Logs into OCIR (Oracle Container Registry)
    - Sets up Docker buildx for ARM64 cross-compilation
    - Reads `docker-bake.hcl` from the application repository
@@ -74,34 +78,32 @@ cp .env.oci-deploy.example .env.oci-deploy
    - Pushes images directly to OCIR
    - Reads `BAKE_FILE` path from `.env.oci-deploy`
 
-7. **`07-setup-kubernetes.sh`** - Set up Kubernetes namespace and secrets
+7. [`07-setup-kubernetes.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/07-setup-kubernetes.sh) - Set up Kubernetes namespace and secrets
    - Creates application namespace
    - Creates docker-registry secret for OCIR authentication
    - Configures image pull secrets for deployments
 
-8. **`08-deploy-application.sh`** - Deploy application with Kustomize
+8. [`08-deploy-application.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/08-deploy-application.sh) - Deploy application with Kustomize
    - Applies Kustomize manifests from `k8s/overlays/oci/`
    - Creates all Kubernetes resources (Deployments, Services, Jobs, etc.)
    - Watches pod status until ready
 
-9. **`09-verify-deployment.sh`** - Verify deployment is healthy
+9. [`09-verify-deployment.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/09-verify-deployment.sh) - Verify deployment is healthy
    - Checks job logs
    - Lists all pods and their status
    - Lists all services
 
 ### Utility Scripts
 
-- **`port-forward.sh`** - Port forward services to localhost
+- [`port-forward.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/port-forward.sh) - Port forward services to localhost
   ```bash
   ./port-forward.sh <service-name>    # Forward to localhost
   ```
 
-- **`oci-deploy-full.sh`** - Master orchestration script
+- [`cleanup-oci.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/cleanup-oci.sh) - Delete OCI resources to avoid billing
   ```bash
-  ./oci-deploy-full.sh infra   # Steps 1-5 (infrastructure)
-  ./oci-deploy-full.sh images  # Step 6 (build and push images)
-  ./oci-deploy-full.sh deploy  # Steps 7-9 (deploy application)
-  ./oci-deploy-full.sh all     # Steps 1-9 (complete deployment)
+  ./cleanup-oci.sh        # Delete cluster and node pool (keep networking)
+  ./cleanup-oci.sh --all  # Delete everything including VCN
   ```
 
 ## Environment Configuration
@@ -158,14 +160,6 @@ See `.env.oci-deploy.example` for all options with comments
 - Ability to create VCNs and OKE clusters in your OCI account
 
 ## Workflow
-
-### Full Automated Deployment
-```bash
-# One-shot deployment (takes ~45 minutes total)
-./oci-deploy-full.sh all
-```
-
-### Step-by-Step Deployment
 
 ```bash
 # 1. Verify your OCI CLI is configured
@@ -312,16 +306,16 @@ rm -f /tmp/oci-deploy-ocids.env
 
 These scripts are designed to be educational:
 
-- **01-verify-cli.sh** - How OCI CLI authentication works
-- **02-create-networking.sh** - VCN architecture, routing, subnets
-- **03-create-cluster.sh** - Kubernetes managed services
-- **04-create-nodepool.sh** - Capacity polling, node pool creation
-- **05-configure-kubectl.sh** - kubeconfig and token-based auth
-- **`06-build-push-images.sh`** - Docker Bake, buildx, ARM64 cross-compilation, registry auth
-- **07-setup-kubernetes.sh** - Kubernetes secrets and image pull authentication
-- **08-deploy-application.sh** - Kustomize, declarative infrastructure
-- **09-verify-deployment.sh** - Kubernetes debugging and troubleshooting
-- **port-forward.sh** - kubectl port-forward for local testing
+- [`01-verify-cli.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/01-verify-cli.sh) - How OCI CLI authentication works
+- [`02-create-networking.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/02-create-networking.sh) - VCN architecture, routing, subnets
+- [`03-create-cluster.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/03-create-cluster.sh) - Kubernetes managed services
+- [`04-create-nodepool.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/04-create-nodepool.sh) - Capacity polling, node pool creation
+- [`05-configure-kubectl.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/05-configure-kubectl.sh) - kubeconfig and token-based auth
+- [`06-build-push-images.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/06-build-push-images.sh) - Docker Bake, buildx, ARM64 cross-compilation, registry auth
+- [`07-setup-kubernetes.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/07-setup-kubernetes.sh) - Kubernetes secrets and image pull authentication
+- [`08-deploy-application.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/08-deploy-application.sh) - Kustomize, declarative infrastructure
+- [`09-verify-deployment.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/09-verify-deployment.sh) - Kubernetes debugging and troubleshooting
+- [`cleanup-oci.sh`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/cleanup-oci.sh) - Resource cleanup and teardown
 
 Each script prints the commands it runs so you can learn by reading the output.
 
@@ -349,7 +343,7 @@ This repository uses [Docker Bake](https://docs.docker.com/build/bake/) for buil
 
 ### Creating a docker-bake.hcl
 
-See `docker-bake.hcl.example` for a template. The basic structure:
+See [`docker-bake.hcl.example`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/docker-bake.hcl.example) for a template. The basic structure:
 
 ```hcl
 variable "OCIR_PREFIX" {
@@ -394,13 +388,4 @@ cd /path/to/your-app
 docker buildx bake --print
 ```
 
-For detailed instructions for AI agents, see [AGENTS.md](./AGENTS.md).
-
-## Contributing
-
-When adding new scripts:
-1. Follow the naming convention: `NN-descriptive-name.sh`
-2. Source `lib/common.sh` for utility functions
-3. Load environment with `load_env`
-4. Use `explain`, `run_cmd`, and `success` for user feedback
-5. Add step number and documentation at the top
+For detailed instructions for AI agents, see [`AGENTS.md`](https://github.com/ohEmily/oci-always-free-tier-deploy/blob/main/AGENTS.md).
