@@ -6,10 +6,8 @@ Modular, well-documented scripts for deploying applications to Oracle Cloud Infr
 
 1. **Set up environment configuration:**
    ```bash
-   # Copy the example secrets file and fill in your OCI credentials
    cp .env.oci-deploy.example .env.oci-deploy
-   # Edit .env.oci-deploy with your actual values (OCIDs, auth token, etc.)
-   # Note: Non-sensitive config (like node shape, K8s version) is in config.sh
+   # Edit .env.oci-deploy with your OCI credentials and configuration
    ```
 
 2. **Run the deployment:**
@@ -27,21 +25,12 @@ Modular, well-documented scripts for deploying applications to Oracle Cloud Infr
 
 ### Configuration
 
-The deployment uses a two-file configuration approach:
+All configuration is in **`.env.oci-deploy`** (not version controlled, since it contains secrets).
 
-- **`config.sh`** - Non-sensitive deployment defaults (VERSION CONTROLLED)
-  - Node shape (VM.Standard.A1.Flex for free tier)
-  - Kubernetes version
-  - Network CIDR blocks
-  - Resource counts and sizes
-  - This file IS committed to git so infrastructure decisions are visible
-
-- **`.env.oci-deploy`** - Secrets and account-specific values (NOT version controlled)
-  - OCI account identifiers (TENANCY_OCID, USER_OCID)
-  - Region configuration
-  - OCIR authentication token (SECRET)
-  - Account-specific namespace and username
-  - Not committed to git (in `.gitignore`)
+Copy the example and edit with your values:
+```bash
+cp .env.oci-deploy.example .env.oci-deploy
+```
 
 ### Shared Library
 - **`lib/common.sh`** - Reusable functions for all scripts
@@ -83,7 +72,7 @@ The deployment uses a two-file configuration approach:
    - Reads `docker-bake.hcl` from the application repository
    - Builds all images defined in the bake file in parallel
    - Pushes images directly to OCIR
-   - Use `--bake-file` to specify the path to `docker-bake.hcl`
+   - Reads `BAKE_FILE` path from `.env.oci-deploy`
 
 7. **`07-setup-kubernetes.sh`** - Set up Kubernetes namespace and secrets
    - Creates application namespace
@@ -117,66 +106,20 @@ The deployment uses a two-file configuration approach:
 
 ## Environment Configuration
 
-### Two-File Configuration Approach
-
-Configuration is split between two files:
-
-#### 1. `config.sh` (version controlled)
-Contains non-sensitive deployment defaults. You typically don't need to edit this file unless you want to change infrastructure specs:
+All configuration is in `.env.oci-deploy`. Copy the example and fill in your values:
 
 ```bash
-# Kubernetes Configuration
-export KUBERNETES_VERSION="v1.32.1"
-export CLUSTER_NAME="my-cluster"
-export NAMESPACE="my-app"
-
-# Node Pool (using free-tier ARM instances)
-export NODE_SHAPE="VM.Standard.A1.Flex"
-export NODE_COUNT="2"
-export NODE_OCPUS="2"
-export NODE_MEMORY_GB="12"
-
-# Network Configuration
-export VCN_NAME="my-vcn"
-export VCN_CIDR="10.0.0.0/16"
-export SUBNET_NAME="my-subnet"
-export SUBNET_CIDR="10.0.1.0/24"
-```
-
-#### 2. `.env.oci-deploy` (NOT version controlled)
-Create this file with your secrets and account-specific identifiers:
-
-```bash
-# Copy the example file
 cp .env.oci-deploy.example .env.oci-deploy
-
-# Then edit with your values:
-
-# OCI Account Identifiers
-export TENANCY_OCID="ocid1.tenancy.oc1..aaaaa..."
-export USER_OCID="ocid1.user.oc1..aaaaa..."
-
-# Region
-export REGION="us-ashburn-1"
-export REGION_KEY="iad"
-
-# OCIR Auth Token (SECRET - from OCI Console → Profile → Auth Tokens)
-export OCIR_AUTH_TOKEN="your-auth-token-here"
-
-# Account-Specific Configuration
-export TENANCY_NAMESPACE="your-tenancy-namespace"
-export OCI_USERNAME="your-email@example.com"
-
-# Derived values
-export OCIR_URL="${REGION_KEY}.ocir.io"
-export OCIR_PREFIX="${OCIR_URL}/${TENANCY_NAMESPACE}"
 ```
 
-**Why split configuration this way?**
-- Important infrastructure decisions (like using free-tier ARM instances) are visible in git history
-- Secrets stay out of version control
-- Account-specific IDs don't clutter the repo
-- You can override any config.sh value by setting it in .env.oci-deploy
+The file includes:
+- **OCI Account** - Tenancy/User OCIDs, region, auth token
+- **Kubernetes** - Cluster name, namespace, K8s version
+- **Node Pool** - Shape, count, CPU/memory (defaults to free-tier ARM)
+- **Network** - VCN/subnet names and CIDRs
+- **Docker Bake** - Path to your application's `docker-bake.hcl`
+
+See `.env.oci-deploy.example` for all options with comments
 
 ## Prerequisites
 
@@ -241,8 +184,8 @@ caffeinate ./04-create-nodepool.sh
 ./05-configure-kubectl.sh
 
 # 6. Build and push Docker images (20-30 minutes)
-# Specify the path to your application's docker-bake.hcl
-./06-build-push-images.sh --bake-file /path/to/your-app/docker-bake.hcl
+# Uses BAKE_FILE from .env.oci-deploy
+./06-build-push-images.sh
 
 # 7. Set up Kubernetes namespace and secrets
 ./07-setup-kubernetes.sh
@@ -430,11 +373,8 @@ target "worker" {
 ### Building Images
 
 ```bash
-# Build images using a specific bake file
-./06-build-push-images.sh --bake-file /path/to/your-app/docker-bake.hcl
-
-# Or with the short flag
-./06-build-push-images.sh -f /path/to/your-app/docker-bake.hcl
+# Set BAKE_FILE in .env.oci-deploy, then run:
+./06-build-push-images.sh
 
 # Preview what will be built (from the app repo)
 cd /path/to/your-app

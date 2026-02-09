@@ -1,16 +1,17 @@
 #!/bin/bash
 # 06-build-push-images.sh - Build and push Docker images to OCIR using Docker Bake
 #
-# Usage:
-#   ./06-build-push-images.sh --bake-file /path/to/docker-bake.hcl
-#   ./06-build-push-images.sh -f /path/to/docker-bake.hcl
+# Usage: ./06-build-push-images.sh
 #
 # This script:
 #   1. Logs into OCIR container registry
 #   2. Sets up Docker buildx for ARM64 cross-compilation
-#   3. Reads the specified docker-bake.hcl file
+#   3. Reads the docker-bake.hcl file specified by BAKE_FILE in .env.oci-deploy
 #   4. Builds all images defined in the bake file for ARM64 (Ampere A1 architecture)
 #   5. Pushes images directly to OCIR
+#
+# Required in .env.oci-deploy:
+#   BAKE_FILE - Path to your application's docker-bake.hcl file
 #
 # The bake file must define:
 #   - Image targets (context, dockerfile, tags)
@@ -23,50 +24,24 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 
-BAKE_FILE=""
+resolve_bake_file() {
+  if [[ -z "${BAKE_FILE:-}" ]]; then
+    error_exit "BAKE_FILE not set in .env.oci-deploy
 
-usage() {
-  echo "Usage: $0 --bake-file <path>"
-  echo ""
-  echo "Options:"
-  echo "  -f, --bake-file <path>  Path to docker-bake.hcl file (required)"
-  echo ""
-  echo "Example:"
-  echo "  $0 --bake-file ~/myapp/docker-bake.hcl"
-  echo ""
-  echo "See docker-bake.hcl.example for a template."
-  exit 1
+Please add to your .env.oci-deploy:
+  export BAKE_FILE=\"/path/to/your-app/docker-bake.hcl\"
+
+See docker-bake.hcl.example for a template."
+  fi
+
+  # Verify file exists
+  if [[ ! -f "$BAKE_FILE" ]]; then
+    error_exit "Bake file not found: $BAKE_FILE"
+  fi
+
+  # Resolve to absolute path
+  echo "$(cd "$(dirname "$BAKE_FILE")" && pwd)/$(basename "$BAKE_FILE")"
 }
-
-# Parse arguments
-while [[ $# -gt 0 ]]; do
-  case $1 in
-    -f|--bake-file)
-      BAKE_FILE="$2"
-      shift 2
-      ;;
-    -h|--help)
-      usage
-      ;;
-    *)
-      echo "Unknown option: $1"
-      usage
-      ;;
-  esac
-done
-
-# Require bake file
-if [[ -z "$BAKE_FILE" ]]; then
-  echo "Error: --bake-file is required"
-  echo ""
-  usage
-fi
-
-# Resolve to absolute path and verify it exists
-if [[ ! -f "$BAKE_FILE" ]]; then
-  error_exit "Bake file not found: $BAKE_FILE"
-fi
-BAKE_FILE="$(cd "$(dirname "$BAKE_FILE")" && pwd)/$(basename "$BAKE_FILE")"
 
 docker_login() {
   explain "OCIR (Oracle Cloud Infrastructure Registry) is OCI's container registry - like Docker Hub but private.
@@ -143,6 +118,9 @@ main() {
   if ! command_exists "docker"; then
     error_exit "Docker is not installed. Run: brew install docker"
   fi
+
+  # Resolve bake file from env var
+  BAKE_FILE="$(resolve_bake_file)"
 
   # Export OCIR_PREFIX for docker-bake.hcl to use
   export OCIR_PREFIX

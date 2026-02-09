@@ -44,43 +44,30 @@ run_cmd_capture() {
   "$@"
 }
 
-# Load configuration and environment variables
-# First loads non-sensitive defaults from config.sh (version controlled)
-# Then loads secrets and overrides from .env.oci-deploy (not version controlled)
+# Load configuration and environment variables from .env.oci-deploy
 load_env() {
   local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
   local scripts_dir="$(dirname "$script_dir")"
-  local config_file="${scripts_dir}/config.sh"
   local env_file="${scripts_dir}/.env.oci-deploy"
 
-  # First, load non-sensitive defaults from config.sh
-  if [ ! -f "$config_file" ]; then
-    echo "ERROR: Configuration file not found: $config_file"
-    echo "This should be version controlled - something is wrong!"
-    exit 1
-  fi
-  source "$config_file"
-  log "Configuration loaded from $config_file"
-
-  # Then, load secrets and account-specific values from .env.oci-deploy
   if [ ! -f "$env_file" ]; then
     echo "ERROR: Environment file not found: $env_file"
-    echo "Please create .env.oci-deploy in the scripts directory"
-    echo "You can start from: cp $scripts_dir/.env.oci-deploy.example $env_file"
+    echo ""
+    echo "Please create .env.oci-deploy:"
+    echo "  cp $scripts_dir/.env.oci-deploy.example $env_file"
+    echo "  # Then edit $env_file with your values"
     exit 1
   fi
   source "$env_file"
-  log "Secrets and account config loaded from $env_file"
+  log "Configuration loaded from $env_file"
 
-  # Verify required variables are set (mix of config.sh and .env.oci-deploy)
+  # Verify required variables are set
   local required_vars=(
-    # From .env.oci-deploy (secrets/account-specific)
     "TENANCY_OCID"
     "REGION"
     "REGION_KEY"
     "TENANCY_NAMESPACE"
     "OCI_USERNAME"
-    # From config.sh (non-sensitive defaults)
     "CLUSTER_NAME"
     "NAMESPACE"
     "NODE_SHAPE"
@@ -89,7 +76,7 @@ load_env() {
 
   for var in "${required_vars[@]}"; do
     if [ -z "${!var:-}" ]; then
-      echo "ERROR: Required environment variable not set: $var"
+      echo "ERROR: Required variable not set in .env.oci-deploy: $var"
       exit 1
     fi
   done

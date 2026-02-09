@@ -155,11 +155,9 @@ target "with-args" {
 ### Building Images from an Application Repository
 
 ```bash
-# From within oci-deploy-scripts directory
-./06-build-push-images.sh --bake-file /path/to/app-repo/docker-bake.hcl
-
-# Or with the short flag
-./06-build-push-images.sh -f /path/to/app-repo/docker-bake.hcl
+# Set BAKE_FILE in .env.oci-deploy to point to your app's docker-bake.hcl
+# Then from within oci-deploy-scripts directory:
+./06-build-push-images.sh
 ```
 
 ### Environment Requirements
