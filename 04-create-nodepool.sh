@@ -1,7 +1,7 @@
 #!/bin/bash
-# 03b-create-nodepool-with-capacity-check.sh - Wrapper for cloud function polling
+# 04-create-nodepool.sh - Create node pool with capacity polling
 #
-# Usage: ./03b-create-nodepool-with-capacity-check.sh
+# Usage: ./04-create-nodepool.sh
 #
 # This script delegates to the Cloud Function implementation (03b-nodepool-cloudfunc)
 # for capacity polling and node pool creation.

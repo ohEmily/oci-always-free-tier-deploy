@@ -1,7 +1,7 @@
 #!/bin/bash
-# 07-deploy-application.sh - Deploy the Should I Walk application to OKE
+# 08-deploy-application.sh - Deploy the Should I Walk application to OKE
 #
-# Usage: ./07-deploy-application.sh
+# Usage: ./08-deploy-application.sh
 #
 # This script deploys all Kubernetes resources using Kustomize, which includes:
 #   - Database migration job
@@ -18,7 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 
 main() {
-  print_section "Step 7: Deploy Application with Kustomize"
+  print_section "Step 8: Deploy Application with Kustomize"
 
   load_env
   verify_requirements

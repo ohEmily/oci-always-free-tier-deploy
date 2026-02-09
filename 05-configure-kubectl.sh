@@ -1,7 +1,7 @@
 #!/bin/bash
-# 04-configure-kubectl.sh - Configure kubectl to access the OKE cluster
+# 05-configure-kubectl.sh - Configure kubectl to access the OKE cluster
 #
-# Usage: ./04-configure-kubectl.sh
+# Usage: ./05-configure-kubectl.sh
 #
 # This script generates a kubeconfig file that allows kubectl to authenticate
 # with and manage the OKE cluster.
@@ -12,7 +12,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 
 main() {
-  print_section "Step 4: Configure kubectl Access"
+  print_section "Step 5: Configure kubectl Access"
 
   load_env
   verify_requirements

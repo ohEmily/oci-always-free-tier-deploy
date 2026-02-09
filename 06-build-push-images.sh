@@ -1,7 +1,7 @@
 #!/bin/bash
-# 05-build-push-images.sh - Build and push Docker images to OCIR
+# 06-build-push-images.sh - Build and push Docker images to OCIR
 #
-# Usage: ./05-build-push-images.sh
+# Usage: ./06-build-push-images.sh
 #
 # This script:
 #   1. Logs into OCIR container registry
@@ -96,7 +96,7 @@ build_images() {
 }
 
 main() {
-  print_section "Step 5: Build and Push Docker Images to OCIR"
+  print_section "Step 6: Build and Push Docker Images to OCIR"
 
   load_env
   verify_requirements

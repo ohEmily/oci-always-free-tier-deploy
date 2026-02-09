@@ -1,7 +1,7 @@
 #!/bin/bash
-# 08-verify-deployment.sh - Verify the application deployment is healthy
+# 09-verify-deployment.sh - Verify the application deployment is healthy
 #
-# Usage: ./08-verify-deployment.sh
+# Usage: ./09-verify-deployment.sh
 #
 # This script checks:
 #   - Database migration job completion
@@ -15,7 +15,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 
 main() {
-  print_section "Step 8: Verify Deployment"
+  print_section "Step 9: Verify Deployment"
 
   load_env
   verify_requirements

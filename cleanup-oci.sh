@@ -185,19 +185,21 @@ main() {
   
   if [[ "${1:-}" == "--all" ]]; then
     explain "To redeploy everything from scratch:
-     ./scripts/02-create-networking.sh
-     ./scripts/03-create-cluster.sh
-     ./scripts/04-configure-kubectl.sh
-     ./scripts/05-build-push-images.sh
-     ./scripts/06-setup-kubernetes.sh
-     ./scripts/07-deploy-application.sh"
+     ./02-create-networking.sh
+     ./03-create-cluster.sh
+     ./04-create-nodepool.sh
+     ./05-configure-kubectl.sh
+     ./06-build-push-images.sh
+     ./07-setup-kubernetes.sh
+     ./08-deploy-application.sh"
   else
     explain "Networking was preserved. To redeploy with free-tier A1 instances:
-     ./scripts/03-create-cluster.sh
-     ./scripts/04-configure-kubectl.sh
-     ./scripts/05-build-push-images.sh
-     ./scripts/06-setup-kubernetes.sh
-     ./scripts/07-deploy-application.sh"
+     ./03-create-cluster.sh
+     ./04-create-nodepool.sh
+     ./05-configure-kubectl.sh
+     ./06-build-push-images.sh
+     ./07-setup-kubernetes.sh
+     ./08-deploy-application.sh"
   fi
 }
 

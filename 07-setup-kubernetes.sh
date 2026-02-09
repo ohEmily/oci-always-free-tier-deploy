@@ -1,7 +1,7 @@
 #!/bin/bash
-# 06-setup-kubernetes.sh - Set up Kubernetes namespace and image pull secrets
+# 07-setup-kubernetes.sh - Set up Kubernetes namespace and image pull secrets
 #
-# Usage: ./06-setup-kubernetes.sh
+# Usage: ./07-setup-kubernetes.sh
 #
 # This script:
 #   1. Creates the Kubernetes namespace for the application
@@ -14,7 +14,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/common.sh"
 
 main() {
-  print_section "Step 6: Set Up Kubernetes Namespace and Secrets"
+  print_section "Step 7: Set Up Kubernetes Namespace and Secrets"
 
   load_env
   verify_requirements
